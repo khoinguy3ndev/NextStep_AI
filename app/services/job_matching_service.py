@@ -35,6 +35,7 @@ class JobMatchingService:
     def _normalize_skill_name(value: str) -> str:
         return value.strip().lower()
 
+
     @staticmethod
     def calculate_skill_match(payload: JobMatchRequest) -> float:
         if not payload.job_skills:

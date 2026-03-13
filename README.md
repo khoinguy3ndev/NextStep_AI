@@ -15,24 +15,24 @@ Biến bắt buộc cần điền:
 - `GEMINI_API_KEY`
 - (tuỳ môi trường) `DB_PASSWORD`, `DATABASE_URL`
 
-### 1) Chạy Database Docker (pgvector + Adminer)
+### 1) Chạy Database Docker từ BE (nguồn gốc)
 
-Chạy trong thư mục `ai_job_server`:
+Chạy trong thư mục `NextStep_BE`:
 
 ```powershell
 docker compose up -d
 ```
 
-- PostgreSQL: `localhost:5433`
-- Adminer: `http://localhost:8080`
+- PostgreSQL: `localhost:5444`
 
-Thông tin đăng nhập Adminer:
+AI server sẽ dùng chung DB này qua `DATABASE_URL`.
 
-- System: `PostgreSQL`
-- Server: `db` (nếu chạy trong Docker network) hoặc `localhost`
-- Username: `postgres`
-- Password: `123456`
-- Database: `ai_job_db`
+Thông số DB hiện tại của BE mà AI đang dùng chung:
+
+- Host: `localhost`
+- Port: `5444`
+- Username: `nextstep`
+- Database: `postgres`
 
 ### 2) Cào dữ liệu job về DB
 
@@ -53,5 +53,6 @@ python -c "from app.db.session import get_standalone_db; from app.services.embed
 
 ### Lưu ý quan trọng
 
-- AI server đang dùng DB URL ở file `.env`, cổng chuẩn hiện tại là `5433`.
-- Nếu máy có PostgreSQL local chạy cổng `5432`, vẫn không ảnh hưởng luồng Docker ở `5433`.
+- BE là nguồn cấu hình DB chính; AI chỉ kết nối theo BE.
+- AI server đang dùng DB URL ở file `.env`, cổng chuẩn hiện tại là `5444`.
+- File [ai_job_server/docker-compose.yml](ai_job_server/docker-compose.yml) không còn tạo DB riêng; chỉ dùng để mở Adminer cùng network với BE.
