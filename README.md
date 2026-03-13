@@ -2,6 +2,17 @@
 
 ## Quick Start for BE
 
+### 0) Tạo file môi trường
+Copy file mẫu thành `.env` rồi điền key của bạn:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Biến bắt buộc cần điền:
+- `GEMINI_API_KEY`
+- (tuỳ môi trường) `DB_PASSWORD`, `DATABASE_URL`
+
 ### 1) Chạy Database Docker (pgvector + Adminer)
 Chạy trong thư mục `ai_job_server`:
 
