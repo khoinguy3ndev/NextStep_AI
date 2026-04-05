@@ -18,9 +18,17 @@ from app.services.job_matching_service import LEVEL_MAP
 class AnalysisService:
     @staticmethod
     def normalize_importance(raw_importance: float) -> float:
-        if raw_importance <= 1:
-            return raw_importance
-        return min(raw_importance / 5.0, 1.0)
+        value = float(raw_importance or 0)
+        if value <= 0:
+            return 0.0
+
+        if value in {1.0, 2.0, 3.0}:
+            return min(value / 3.0, 1.0)
+
+        if value <= 1.0:
+            return value
+
+        return min(value / 3.0, 1.0)
 
     @staticmethod
     def normalize_skill_name(value: str) -> str:

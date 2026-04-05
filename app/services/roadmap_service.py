@@ -111,7 +111,8 @@ class RoadmapService:
             )
             phase_index += 1
 
-        total_weeks = min(total_weeks, request.timeframe_weeks)
+        if request.timeframe_weeks > 0:
+            total_weeks = min(total_weeks, request.timeframe_weeks)
         completion = date.today() + timedelta(weeks=total_weeks)
 
         if total_weeks <= 12:

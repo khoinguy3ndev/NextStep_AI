@@ -91,3 +91,39 @@ def get_job_detail(job_id: int, db: Session = Depends(get_db)):
         "source_url": job.source_url,
         "created_at": job.scraped_at,
     }
+
+
+@router.get("/{job_id}/skills")
+def get_job_skills(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(Job).filter(Job.job_id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    items = []
+    for item in job.job_skills:
+        if not item.skill or not item.skill.name:
+            continue
+        items.append(
+            {
+                "skill_id": item.skill.skill_id,
+                "skill_name": item.skill.name,
+                "importance": item.importance,
+                "required_proficiency": (
+                    0.8
+                    if (item.importance or 0) >= 0.8
+                    else 0.65
+                    if (item.importance or 0) >= 0.5
+                    else 0.5
+                ),
+                "evidence_snippet": item.evidence_snippet,
+            }
+        )
+
+    items.sort(key=lambda value: (value["importance"] if value["importance"] is not None else 0), reverse=True)
+
+    return {
+        "job_id": job.job_id,
+        "title": job.title,
+        "total_skills": len(items),
+        "skills": items,
+    }

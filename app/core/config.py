@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     
     # AI API (Gemini)
     GEMINI_API_KEY: str
+    CV_AI_ENRICHMENT_ENABLED: bool = True
 
     # Các biến bảo mật từ Backend bạn của bạn gửi
     JWT_ACCESS_SECRET: str

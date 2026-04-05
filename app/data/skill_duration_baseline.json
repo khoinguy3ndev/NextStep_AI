@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "description": "Skill learning-time baselines curated for roadmap estimation.",
+    "method": "Median/representative duration from public course pages (Coursera-first, mixed references).",
+    "unit": "hours",
+    "updated_at": "2026-03-24"
+  },
+  "skills": [
+    {
+      "skill": "python",
+      "aliases": ["python3", "py"],
+      "baseline_hours": 70,
+      "reference_range_hours": [50, 90],
+      "source_hint": "Coursera-like beginner professional tracks"
+    },
+    {
+      "skill": "sql",
+      "aliases": ["postgresql", "mysql", "database sql"],
+      "baseline_hours": 45,
+      "reference_range_hours": [30, 70],
+      "source_hint": "Coursera data/database foundational courses"
+    },
+    {
+      "skill": "java",
+      "aliases": ["core java", "spring java"],
+      "baseline_hours": 80,
+      "reference_range_hours": [55, 110],
+      "source_hint": "Coursera Java tracks and bootcamp-style pathways"
+    },
+    {
+      "skill": "javascript",
+      "aliases": ["js", "ecmascript"],
+      "baseline_hours": 65,
+      "reference_range_hours": [40, 95],
+      "source_hint": "Coursera front-end foundations"
+    },
+    {
+      "skill": "react",
+      "aliases": ["reactjs", "react.js"],
+      "baseline_hours": 60,
+      "reference_range_hours": [40, 85],
+      "source_hint": "Coursera front-end specialization modules"
+    },
+    {
+      "skill": "node.js",
+      "aliases": ["nodejs", "node"],
+      "baseline_hours": 55,
+      "reference_range_hours": [35, 80],
+      "source_hint": "Coursera back-end JavaScript pathways"
+    },
+    {
+      "skill": "docker",
+      "aliases": ["container", "containers"],
+      "baseline_hours": 30,
+      "reference_range_hours": [18, 45],
+      "source_hint": "Coursera DevOps/container modules"
+    },
+    {
+      "skill": "kubernetes",
+      "aliases": ["k8s"],
+      "baseline_hours": 55,
+      "reference_range_hours": [35, 85],
+      "source_hint": "Coursera cloud-native and orchestration modules"
+    },
+    {
+      "skill": "aws",
+      "aliases": ["amazon web services", "cloud aws"],
+      "baseline_hours": 65,
+      "reference_range_hours": [40, 100],
+      "source_hint": "Coursera cloud practitioner/developer tracks"
+    },
+    {
+      "skill": "machine learning",
+      "aliases": ["ml", "applied ml"],
+      "baseline_hours": 90,
+      "reference_range_hours": [60, 140],
+      "source_hint": "Coursera ML specializations"
+    }
+  ]
+}

@@ -16,6 +16,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -33,17 +34,51 @@ class JobCrawler:
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/129.0.0.0 Safari/537.36"
         )
+        self._body_wait_seconds = int(os.getenv("CRAWLER_BODY_WAIT_SECONDS", "12"))
+        self._post_load_sleep_seconds = float(os.getenv("CRAWLER_POST_LOAD_SLEEP_SECONDS", "1.2"))
+        self._page_load_timeout_seconds = int(os.getenv("CRAWLER_PAGELOAD_TIMEOUT_SECONDS", "20"))
+        self._use_webdriver_manager = os.getenv("CRAWLER_USE_WEBDRIVER_MANAGER", "0").strip().lower() in {"1", "true", "yes"}
 
     def _create_driver(self) -> webdriver.Chrome:
         options = Options()
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--blink-settings=imagesEnabled=false")
+        options.page_load_strategy = "eager"
         options.add_argument(f"user-agent={self._user_agent}")
+        options.add_experimental_option(
+            "prefs",
+            {
+                "profile.managed_default_content_settings.images": 2,
+                "profile.default_content_setting_values.notifications": 2,
+            },
+        )
 
-        chromedriver_path = os.getenv("CHROMEDRIVER_PATH", r"D:\CODE\PBL5\ai_job_server\chromedriver.exe")
-        service = Service(executable_path=chromedriver_path)
-        return webdriver.Chrome(service=service, options=options)
+        chromedriver_path = os.getenv("CHROMEDRIVER_PATH", "").strip()
+        if chromedriver_path:
+            service = Service(executable_path=chromedriver_path)
+            driver = webdriver.Chrome(service=service, options=options)
+            driver.set_page_load_timeout(self._page_load_timeout_seconds)
+            return driver
+
+        try:
+            driver = webdriver.Chrome(options=options)
+            driver.set_page_load_timeout(self._page_load_timeout_seconds)
+            return driver
+        except Exception:
+            if not self._use_webdriver_manager:
+                raise
+
+        manager_path = ChromeDriverManager().install()
+        if manager_path.lower().endswith("third_party_notices.chromedriver"):
+            manager_path = os.path.join(os.path.dirname(manager_path), "chromedriver.exe")
+
+        service = Service(manager_path)
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.set_page_load_timeout(self._page_load_timeout_seconds)
+        return driver
 
     @staticmethod
     def _source_name_topdev() -> str:
@@ -397,6 +432,199 @@ class JobCrawler:
 
         return self._dedupe_preserve_order(clean_skills)
 
+    @staticmethod
+    def _build_skill_details(skills: list[str], description: str, title: str) -> list[dict]:
+        if not skills:
+            return []
+
+        title_text = (title or "").lower()
+        normalized_description = description or ""
+        description_ascii = JobCrawler._strip_accents(normalized_description).lower()
+
+        lines = [line.strip() for line in normalized_description.splitlines() if line.strip()]
+        if not lines:
+            lines = [normalized_description]
+
+        sentences = [item.strip() for item in re.split(r"[\n\.\!\?;•\-]+", normalized_description) if item.strip()]
+        sentence_pool = sentences if sentences else lines
+
+        must_keywords = [
+            "must",
+            "required",
+            "mandatory",
+            "strong",
+            "expert",
+            "proficient",
+            "need",
+            "yeu cau",
+            "bat buoc",
+            "kinh nghiem",
+            "thanh thao",
+            "bắt buộc",
+            "yêu cầu",
+            "kinh nghiệm",
+            "thành thạo",
+            "cần",
+        ]
+        preferred_keywords = [
+            "preferred",
+            "nice to have",
+            "plus",
+            "bonus",
+            "advantage",
+            "uu tien",
+            "loi the",
+            "ưu tiên",
+            "lợi thế",
+        ]
+        optional_keywords = [
+            "familiar",
+            "exposure",
+            "basic",
+            "co ban",
+            "cơ bản",
+            "biet",
+            "biết",
+        ]
+        requirement_headers = [
+            "requirement",
+            "qualification",
+            "must-have",
+            "job requirement",
+            "yeu cau",
+            "bắt buộc",
+            "yêu cầu",
+        ]
+        preferred_headers = [
+            "preferred",
+            "nice to have",
+            "benefit",
+            "plus",
+            "ưu tiên",
+            "lợi thế",
+        ]
+
+        def _contains_any(value: str, tokens: list[str]) -> bool:
+            lowered = value.lower()
+            lowered_ascii = JobCrawler._strip_accents(lowered)
+            return any(token in lowered or token in lowered_ascii for token in tokens)
+
+        def classify_text(value: str) -> float:
+            if _contains_any(value, must_keywords):
+                return 0.25
+            if _contains_any(value, preferred_keywords):
+                return -0.05
+            if _contains_any(value, optional_keywords):
+                return -0.10
+            return 0.10
+
+        def section_bonus(evidence_text: str) -> float:
+            target = evidence_text.lower()
+            target_ascii = JobCrawler._strip_accents(target)
+
+            for idx, line in enumerate(lines):
+                candidate = line.lower()
+                candidate_ascii = JobCrawler._strip_accents(candidate)
+                if target in candidate or target_ascii in candidate_ascii:
+                    window = " ".join(lines[max(0, idx - 3) : min(len(lines), idx + 1)])
+                    if _contains_any(window, requirement_headers):
+                        return 0.10
+                    if _contains_any(window, preferred_headers):
+                        return -0.05
+                    break
+            return 0.0
+
+        def _skill_patterns(skill_name: str) -> tuple[re.Pattern[str], re.Pattern[str] | None]:
+            plain = re.compile(rf"(?<!\w){re.escape(skill_name)}(?!\w)", re.IGNORECASE)
+            normalized_skill = JobCrawler._strip_accents(skill_name)
+            if len(normalized_skill) <= 3:
+                return plain, None
+            ascii_variant = re.compile(rf"(?<!\w){re.escape(normalized_skill)}(?!\w)", re.IGNORECASE)
+            return plain, ascii_variant
+
+        details: list[dict] = []
+        seen: set[str] = set()
+
+        for skill in skills:
+            key = skill.strip().lower()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+
+            importance = 0.60
+            evidence = ""
+
+            if key in title_text:
+                importance += 0.20
+
+            pattern, ascii_pattern = _skill_patterns(skill)
+            matched_lines = [line for line in sentence_pool if pattern.search(line)]
+
+            if not matched_lines and ascii_pattern is not None:
+                for line in sentence_pool:
+                    if ascii_pattern.search(JobCrawler._strip_accents(line)):
+                        matched_lines.append(line)
+
+            if matched_lines:
+                evidence = matched_lines[0]
+                importance += classify_text(evidence)
+                importance += section_bonus(evidence)
+            else:
+                if pattern.search(normalized_description):
+                    importance += 0.05
+                elif ascii_pattern is not None and ascii_pattern.search(description_ascii):
+                    importance += 0.05
+
+            importance = max(0.35, min(1.0, importance))
+            details.append(
+                {
+                    "skill": skill,
+                    "importance": round(importance, 2),
+                    "evidence_snippet": evidence[:220] if evidence else None,
+                }
+            )
+
+        if len(details) >= 2:
+            unique_importance = {item["importance"] for item in details}
+            if len(unique_importance) == 1:
+                ranked: list[tuple[float, int, dict]] = []
+                total = len(details)
+                for idx, item in enumerate(details):
+                    signal = 0.0
+                    skill_key = item["skill"].strip().lower()
+                    evidence_text = (item.get("evidence_snippet") or "").lower()
+
+                    if skill_key in title_text:
+                        signal += 0.9
+
+                    if evidence_text:
+                        signal += 0.25
+                        if _contains_any(evidence_text, must_keywords):
+                            signal += 0.6
+                        elif _contains_any(evidence_text, preferred_keywords):
+                            signal -= 0.2
+                        elif _contains_any(evidence_text, optional_keywords):
+                            signal -= 0.35
+
+                    # Ưu tiên nhẹ skill xuất hiện sớm trong danh sách đã trích xuất
+                    signal += (total - idx) / (total * 10.0)
+                    ranked.append((signal, idx, item))
+
+                ranked.sort(key=lambda value: (value[0], -value[1]), reverse=True)
+
+                top_cut = max(1, round(total * 0.3))
+                mid_cut = max(top_cut + 1, round(total * 0.7))
+
+                for rank_idx, (_, _, item) in enumerate(ranked):
+                    if rank_idx < top_cut:
+                        item["importance"] = 0.85
+                    elif rank_idx < mid_cut:
+                        item["importance"] = 0.65
+                    else:
+                        item["importance"] = 0.45
+
+        return details
+
     def _extract_description(self, soup: BeautifulSoup, job_posting: dict | None = None) -> str:
         if job_posting:
             description_html = job_posting.get("description")
@@ -444,8 +672,11 @@ class JobCrawler:
             print(f"DEBUG: Bắt đầu crawl Selenium: {url}")
             driver = self._create_driver()
             driver.get(url)
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-            time.sleep(4)
+            WebDriverWait(driver, self._body_wait_seconds).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            WebDriverWait(driver, self._body_wait_seconds).until(
+                lambda current_driver: current_driver.execute_script("return document.readyState") in ["interactive", "complete"]
+            )
+            time.sleep(self._post_load_sleep_seconds)
 
             html = driver.page_source
             soup = BeautifulSoup(html, "html.parser")
@@ -460,6 +691,7 @@ class JobCrawler:
             salary_range = self._extract_salary(soup, job_posting)
             description = self._extract_description(soup, job_posting)
             skills_list = self._extract_skills(soup, description, title, job_posting)
+            skill_details = self._build_skill_details(skills_list, description, title)
 
             print(f"DEBUG: Title: {title}")
             print(f"DEBUG: Company: {company_name}")
@@ -475,6 +707,7 @@ class JobCrawler:
                 "salary_range": salary_range,
                 "description": description,
                 "job_requirements": ", ".join(skills_list) if skills_list else "Không tìm thấy kỹ năng",
+                "job_skill_details": skill_details,
                 "source_url": url,
                 "source_website": self._source_name_topdev(),
             }
@@ -531,23 +764,96 @@ class JobCrawler:
                 db.flush()
                 return company
 
-            def replace_job_skills(job: Job, skills_text: str | None) -> None:
+            def replace_job_skills(job: Job, skills_text: str | None, skill_details: list[dict] | None = None) -> None:
                 db.query(JobSkill).filter(JobSkill.job_job_id == job.job_id).delete()
 
-                if not skills_text:
+                def to_importance_tier(raw_value: float) -> float:
+                    if raw_value >= 2.5:
+                        return 3.0
+                    if raw_value >= 1.5:
+                        return 2.0
+                    if raw_value > 1.0:
+                        return 1.0
+                    if raw_value >= 0.8:
+                        return 3.0
+                    if raw_value >= 0.55:
+                        return 2.0
+                    return 1.0
+
+                normalized_details: list[dict] = []
+                if skill_details:
+                    seen_keys: set[str] = set()
+                    for detail in skill_details:
+                        skill_name = str(detail.get("skill", "")).strip()
+                        if not skill_name:
+                            continue
+                        key = skill_name.lower()
+                        if key in seen_keys:
+                            continue
+                        seen_keys.add(key)
+
+                        raw_importance = detail.get("importance", 0.6)
+                        try:
+                            importance_value = float(raw_importance)
+                        except (TypeError, ValueError):
+                            importance_value = 0.6
+
+                        normalized_details.append(
+                            {
+                                "skill": skill_name,
+                                "importance": to_importance_tier(importance_value),
+                                "evidence_snippet": detail.get("evidence_snippet"),
+                            }
+                        )
+
+                if normalized_details:
+                    unique_tiers = {float(item.get("importance", 2.0)) for item in normalized_details}
+                    if len(unique_tiers) == 1 and len(normalized_details) >= 2:
+                        ranked_details = sorted(
+                            normalized_details,
+                            key=lambda item: (
+                                len(str(item.get("evidence_snippet") or "")),
+                                str(item.get("skill") or "").lower(),
+                            ),
+                            reverse=True,
+                        )
+
+                        total = len(ranked_details)
+                        top_cut = max(1, round(total * 0.3))
+                        mid_cut = max(top_cut + 1, round(total * 0.7))
+
+                        for idx, item in enumerate(ranked_details):
+                            if idx < top_cut:
+                                item["importance"] = 3.0
+                            elif idx < mid_cut:
+                                item["importance"] = 2.0
+                            else:
+                                item["importance"] = 1.0
+
+                if not normalized_details and not skills_text:
                     return
 
-                skill_names = [item.strip() for item in skills_text.split(",") if item.strip()]
-                deduped: list[str] = []
-                seen: set[str] = set()
-                for skill_name in skill_names:
-                    key = skill_name.lower()
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    deduped.append(skill_name)
+                if not normalized_details:
+                    skill_names = [item.strip() for item in skills_text.split(",") if item.strip()]
+                    deduped: list[str] = []
+                    seen: set[str] = set()
+                    for skill_name in skill_names:
+                        key = skill_name.lower()
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        deduped.append(skill_name)
+                    normalized_details = [
+                        {
+                            "skill": skill_name,
+                            "importance": 2.0,
+                            "evidence_snippet": None,
+                        }
+                        for skill_name in deduped
+                    ]
 
-                for skill_name in deduped:
+                for detail in normalized_details:
+                    skill_name = detail["skill"]
                     skill = db.query(Skill).filter(func.lower(Skill.name) == skill_name.lower()).first()
                     if not skill:
                         skill = Skill(name=skill_name, category="technical", aliases=[], is_active=True)
@@ -558,8 +864,8 @@ class JobCrawler:
                         JobSkill(
                             job_job_id=job.job_id,
                             skill_skill_id=skill.skill_id,
-                            importance=1.0,
-                            evidence_snippet=None,
+                            importance=detail["importance"],
+                            evidence_snippet=detail.get("evidence_snippet"),
                         )
                     )
 
@@ -582,7 +888,7 @@ class JobCrawler:
                 existing_job.scraped_at = datetime.now(timezone.utc)
                 existing_job.status = JobStatus.active
 
-                replace_job_skills(existing_job, job_data.get("job_requirements"))
+                replace_job_skills(existing_job, job_data.get("job_requirements"), job_data.get("job_skill_details"))
                 db.commit()
                 db.refresh(existing_job)
                 print(f"--- UPDATED --- {existing_job.title}")
@@ -605,7 +911,7 @@ class JobCrawler:
             db.add(new_job)
             db.flush()
 
-            replace_job_skills(new_job, job_data.get("job_requirements"))
+            replace_job_skills(new_job, job_data.get("job_requirements"), job_data.get("job_skill_details"))
             db.commit()
             db.refresh(new_job)
             print(f"--- CREATED --- {new_job.title}")

@@ -27,7 +27,7 @@ class ResourceInput(BaseModel):
 
 class RoadmapGenerateRequest(BaseModel):
     goal_title: str = Field(..., min_length=3)
-    timeframe_weeks: int = Field(24, ge=1, le=52)
+    timeframe_weeks: int = Field(0, ge=0)
     max_skills_per_phase: int = Field(4, ge=1, le=5)
     missing_skills: List[MissingSkillInput] = Field(default_factory=list)
     weak_skills: List[WeakSkillInput] = Field(default_factory=list)

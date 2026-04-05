@@ -36,6 +36,9 @@ class JobMatchRequest(BaseModel):
     preferred_locations: List[str] = Field(default_factory=list)
     job_location: Optional[str] = None
     job_is_remote: bool = False
+    cv_title: Optional[str] = None
+    job_title: Optional[str] = None
+    ats_parse_score: Optional[float] = Field(default=None, ge=0, le=1)
 
 
 class ScoreBreakdown(BaseModel):
@@ -44,6 +47,9 @@ class ScoreBreakdown(BaseModel):
     levelMatch: int
     salaryMatch: int
     locationMatch: int
+    keywordMatch: Optional[int] = None
+    titleMatch: Optional[int] = None
+    atsReadability: Optional[int] = None
 
 
 class JobMatchResponse(BaseModel):

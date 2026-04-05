@@ -14,3 +14,6 @@ class Skill(Base):
     is_active = Column(Boolean, nullable=False, default=True)
 
     job_skills = relationship("JobSkill", back_populates="skill")
+    cv_skills = relationship("CvSkill", back_populates="skill")
+    skill_gaps = relationship("SkillGap", back_populates="skill")
+    skill_courses = relationship("SkillCourse", back_populates="skill", cascade="all, delete-orphan")

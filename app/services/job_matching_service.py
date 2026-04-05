@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, List, Set
+import re
 
 from app.schemas.analyzer import JobMatchRequest, JobMatchResponse, ScoreBreakdown
 
@@ -17,34 +18,58 @@ LEVEL_MAP: Dict[str, int] = {
 
 @dataclass
 class MatchComponents:
+    keyword: float
     skill: float
-    experience: float
-    level: float
-    salary: float
-    location: float
+    title: float
+    ats: float
 
 
 class JobMatchingService:
     @staticmethod
     def _normalize_importance(raw_importance: float) -> float:
-        if raw_importance <= 1:
-            return raw_importance
-        return min(raw_importance / 5.0, 1.0)
+        value = float(raw_importance or 0)
+        if value <= 0:
+            return 0.0
+
+        if value in {1.0, 2.0, 3.0}:
+            return min(value / 3.0, 1.0)
+
+        if value <= 1.0:
+            return value
+
+        return min(value / 3.0, 1.0)
 
     @staticmethod
     def _normalize_skill_name(value: str) -> str:
         return value.strip().lower()
 
+    @staticmethod
+    def _tokenize(value: str) -> Set[str]:
+        return {token for token in re.split(r"[^a-zA-Z0-9+#]+", (value or "").lower()) if token}
 
     @staticmethod
-    def calculate_skill_match(payload: JobMatchRequest) -> float:
+    def _jaccard(left: Set[str], right: Set[str]) -> float:
+        if not left or not right:
+            return 0.0
+        union = left.union(right)
+        if not union:
+            return 0.0
+        return len(left.intersection(right)) / len(union)
+
+
+    @staticmethod
+    def calculate_keyword_match(payload: JobMatchRequest) -> float:
         if not payload.job_skills:
             return 0.0
 
-        cv_skill_map = {
-            JobMatchingService._normalize_skill_name(skill.name): skill.proficiency
+        cv_skill_keys = [
+            JobMatchingService._normalize_skill_name(skill.name)
             for skill in payload.cv_skills
-        }
+            if skill.name
+        ]
+
+        if not cv_skill_keys:
+            return 0.0
 
         weighted_sum = 0.0
         weight_total = 0.0
@@ -52,9 +77,25 @@ class JobMatchingService:
         for required in payload.job_skills:
             skill_key = JobMatchingService._normalize_skill_name(required.name)
             weight = JobMatchingService._normalize_importance(required.importance)
-            proficiency = cv_skill_map.get(skill_key, 0.0)
 
-            weighted_sum += weight * proficiency
+            match_value = 0.0
+            if skill_key in cv_skill_keys:
+                match_value = 1.0
+            else:
+                required_tokens = JobMatchingService._tokenize(skill_key)
+                for cv_key in cv_skill_keys:
+                    if not cv_key:
+                        continue
+                    cv_tokens = JobMatchingService._tokenize(cv_key)
+                    overlap = JobMatchingService._jaccard(required_tokens, cv_tokens)
+                    if overlap >= 0.3:
+                        match_value = 0.5
+                        break
+                    if skill_key in cv_key or cv_key in skill_key:
+                        match_value = 0.5
+                        break
+
+            weighted_sum += weight * match_value
             weight_total += weight
 
         if weight_total == 0:
@@ -63,52 +104,69 @@ class JobMatchingService:
         return weighted_sum / weight_total
 
     @staticmethod
-    def calculate_experience_match(payload: JobMatchRequest) -> float:
-        if payload.job_years_required <= 0:
-            return 1.0
-        return min(1.0, payload.cv_years_experience / payload.job_years_required)
-
-    @staticmethod
-    def calculate_level_match(payload: JobMatchRequest) -> float:
-        cv_level = LEVEL_MAP.get(payload.cv_level.strip().lower(), 1)
-        job_level = LEVEL_MAP.get(payload.job_level.strip().lower(), 1)
-        level_diff = abs(cv_level - job_level)
-
-        if level_diff == 0:
-            return 1.0
-        if level_diff == 1:
-            return 0.6
-        return 0.0
-
-    @staticmethod
-    def calculate_salary_match(payload: JobMatchRequest) -> float:
-        if not payload.desired_salary or not payload.job_salary:
+    def calculate_skill_match(payload: JobMatchRequest) -> float:
+        if not payload.job_skills:
             return 0.0
 
-        desired_min = payload.desired_salary.min
-        desired_max = payload.desired_salary.max
-        job_min = payload.job_salary.min
-        job_max = payload.job_salary.max
-
-        desired_range = desired_max - desired_min
-        if desired_range <= 0:
+        cv_items = [skill for skill in payload.cv_skills if skill.name]
+        if not cv_items:
             return 0.0
 
-        overlap = max(0.0, min(desired_max, job_max) - max(desired_min, job_min))
-        return overlap / desired_range
+        total = 0.0
+        for required in payload.job_skills:
+            req_name = JobMatchingService._normalize_skill_name(required.name)
+            required_tokens = JobMatchingService._tokenize(req_name)
+
+            best = 0.0
+            for cv_skill in cv_items:
+                cv_name = JobMatchingService._normalize_skill_name(cv_skill.name)
+                if cv_name == req_name:
+                    score = 1.0
+                else:
+                    overlap = JobMatchingService._jaccard(required_tokens, JobMatchingService._tokenize(cv_name))
+                    score = min(0.6, overlap)
+
+                score *= cv_skill.proficiency
+                if score > best:
+                    best = score
+
+            total += best
+
+        return total / len(payload.job_skills)
 
     @staticmethod
-    def calculate_location_match(payload: JobMatchRequest) -> float:
-        if payload.job_is_remote:
-            return 0.8
+    def calculate_title_match(payload: JobMatchRequest) -> float:
+        cv_title = (payload.cv_title or "").strip()
+        job_title = (payload.job_title or "").strip()
 
-        if not payload.job_location or not payload.preferred_locations:
-            return 0.0
+        if cv_title and job_title:
+            left = JobMatchingService._tokenize(cv_title)
+            right = JobMatchingService._tokenize(job_title)
+            token_score = JobMatchingService._jaccard(left, right)
+            if cv_title.lower() == job_title.lower():
+                token_score = 1.0
+            return min(1.0, token_score)
 
-        job_location = payload.job_location.strip().lower()
-        preferred_locations = {location.strip().lower() for location in payload.preferred_locations}
+        cv_level = LEVEL_MAP.get((payload.cv_level or "").strip().lower(), 1)
+        job_level = LEVEL_MAP.get((payload.job_level or "").strip().lower(), 1)
+        diff = abs(cv_level - job_level)
+        return max(0.0, 1.0 - 0.3 * diff)
 
-        return 1.0 if job_location in preferred_locations else 0.0
+    @staticmethod
+    def calculate_ats_readability(payload: JobMatchRequest) -> float:
+        if payload.ats_parse_score is not None:
+            return max(0.0, min(1.0, payload.ats_parse_score))
+
+        score = 0.0
+        if payload.cv_skills:
+            score += 0.5
+        if payload.cv_years_experience > 0:
+            score += 0.2
+        if (payload.cv_level or "").strip().lower() in LEVEL_MAP:
+            score += 0.2
+        if payload.preferred_locations:
+            score += 0.1
+        return min(1.0, score)
 
     @staticmethod
     def _matched_missing_skills(payload: JobMatchRequest) -> tuple[List[str], List[str]]:
@@ -128,19 +186,17 @@ class JobMatchingService:
     @staticmethod
     def calculate_job_match(payload: JobMatchRequest) -> JobMatchResponse:
         components = MatchComponents(
+            keyword=JobMatchingService.calculate_keyword_match(payload),
             skill=JobMatchingService.calculate_skill_match(payload),
-            experience=JobMatchingService.calculate_experience_match(payload),
-            level=JobMatchingService.calculate_level_match(payload),
-            salary=JobMatchingService.calculate_salary_match(payload),
-            location=JobMatchingService.calculate_location_match(payload),
+            title=JobMatchingService.calculate_title_match(payload),
+            ats=JobMatchingService.calculate_ats_readability(payload),
         )
 
         score = (
-            0.55 * components.skill
-            + 0.15 * components.experience
-            + 0.10 * components.level
-            + 0.10 * components.salary
-            + 0.10 * components.location
+            0.60 * components.keyword
+            + 0.20 * components.skill
+            + 0.10 * components.title
+            + 0.10 * components.ats
         )
 
         matched_skills, missing_skills = JobMatchingService._matched_missing_skills(payload)
@@ -149,10 +205,13 @@ class JobMatchingService:
             score=round(score * 100),
             scoreBreakdownJson=ScoreBreakdown(
                 skillMatch=round(components.skill * 100),
-                experienceMatch=round(components.experience * 100),
-                levelMatch=round(components.level * 100),
-                salaryMatch=round(components.salary * 100),
-                locationMatch=round(components.location * 100),
+                experienceMatch=0,
+                levelMatch=round(components.title * 100),
+                salaryMatch=0,
+                locationMatch=round(components.ats * 100),
+                keywordMatch=round(components.keyword * 100),
+                titleMatch=round(components.title * 100),
+                atsReadability=round(components.ats * 100),
             ),
             missingSkills=missing_skills,
             matchedSkills=matched_skills,

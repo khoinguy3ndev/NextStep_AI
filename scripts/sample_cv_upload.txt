@@ -1,0 +1,15 @@
+Nguyen Van B
+Email: sample@email.com
+Location: Ho Chi Minh
+
+Summary:
+Junior software engineer with 3 years of experience in backend development.
+Skills include Python, SQL, Docker, FastAPI, PostgreSQL, Git and REST API.
+Basic knowledge of AWS and React.
+
+Experience:
+- 3 years experience working in software projects
+- Built APIs and CI/CD pipelines
+
+Certificates:
+- AWS Certified Cloud Practitioner
