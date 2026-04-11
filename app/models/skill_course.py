@@ -13,6 +13,7 @@ class SkillCourse(Base):
 	title = Column(String(255), nullable=False)
 	url = Column(Text, nullable=True)
 	duration = Column(String(50), nullable=True)
+	duration_hours = Column(Integer, nullable=True)
 	level = Column(String(20), nullable=True)
 
 	skill = relationship("Skill", back_populates="skill_courses")

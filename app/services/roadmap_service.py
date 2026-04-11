@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+import math
 from typing import Dict, List
 
 from app.schemas.roadmap import (
@@ -13,6 +14,8 @@ from app.schemas.roadmap import (
 
 
 class RoadmapService:
+    HOURS_PER_WEEK = 8
+
     @staticmethod
     def _priority_from_importance(importance: str) -> int:
         if importance == "high":
@@ -38,6 +41,28 @@ class RoadmapService:
         return 2
 
     @staticmethod
+    def _estimated_hours_and_weeks(
+        baseline_hours: int | None,
+        importance: str,
+        gap_value: float,
+        transfer_bonus: float,
+        fallback_weeks: int,
+    ) -> tuple[int | None, int]:
+        if baseline_hours is None or baseline_hours <= 0:
+            return None, max(1, fallback_weeks)
+
+        normalized_gap = max(0.0, min(gap_value, 1.0))
+        normalized_transfer = max(0.0, min(transfer_bonus, 0.6))
+
+        importance_factor = 1.15 if importance == "high" else 1.0 if importance == "medium" else 0.9
+        gap_factor = 1.0 + (0.7 * normalized_gap)
+        transfer_factor = 1.0 - normalized_transfer
+
+        adjusted_hours = max(6, round(float(baseline_hours) * importance_factor * gap_factor * transfer_factor))
+        weeks = max(1, math.ceil(adjusted_hours / RoadmapService.HOURS_PER_WEEK))
+        return adjusted_hours, weeks
+
+    @staticmethod
     def _resource_map(request: RoadmapGenerateRequest) -> Dict[str, List[RecommendedResource]]:
         skill_resource_map: Dict[str, List[RecommendedResource]] = {}
         for resource in request.resources:
@@ -61,11 +86,22 @@ class RoadmapService:
 
         for item in request.missing_skills:
             key = item.skill.strip().lower()
+            default_weeks = RoadmapService._weeks_from_importance(item.importance)
+            adjusted_hours, estimated_weeks = RoadmapService._estimated_hours_and_weeks(
+                baseline_hours=item.baseline_hours,
+                importance=item.importance,
+                gap_value=1.0,
+                transfer_bonus=item.transfer_bonus,
+                fallback_weeks=default_weeks,
+            )
             skill_items.append(
                 RoadmapSkillItem(
                     skill_name=item.skill,
                     priority=RoadmapService._priority_from_importance(item.importance),
-                    estimated_weeks=RoadmapService._weeks_from_importance(item.importance),
+                    estimated_weeks=estimated_weeks,
+                    baseline_hours=item.baseline_hours,
+                    transfer_bonus=item.transfer_bonus,
+                    adjusted_hours=adjusted_hours,
                     recommended_resources=skill_resource_map.get(key, []),
                 )
             )
@@ -74,11 +110,22 @@ class RoadmapService:
             if any(existing.skill_name.lower() == item.skill.lower() for existing in skill_items):
                 continue
             key = item.skill.strip().lower()
+            default_weeks = RoadmapService._weeks_from_gap(item.gap)
+            adjusted_hours, estimated_weeks = RoadmapService._estimated_hours_and_weeks(
+                baseline_hours=item.baseline_hours,
+                importance="medium",
+                gap_value=item.gap,
+                transfer_bonus=item.transfer_bonus,
+                fallback_weeks=default_weeks,
+            )
             skill_items.append(
                 RoadmapSkillItem(
                     skill_name=item.skill,
                     priority=3,
-                    estimated_weeks=RoadmapService._weeks_from_gap(item.gap),
+                    estimated_weeks=estimated_weeks,
+                    baseline_hours=item.baseline_hours,
+                    transfer_bonus=item.transfer_bonus,
+                    adjusted_hours=adjusted_hours,
                     recommended_resources=skill_resource_map.get(key, []),
                 )
             )

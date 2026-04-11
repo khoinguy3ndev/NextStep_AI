@@ -8,6 +8,8 @@ class MissingSkillInput(BaseModel):
     skill: str
     importance: str
     reason: str
+    baseline_hours: Optional[int] = Field(default=None, ge=1)
+    transfer_bonus: float = Field(default=0.0, ge=0, le=0.6)
 
 
 class WeakSkillInput(BaseModel):
@@ -15,6 +17,8 @@ class WeakSkillInput(BaseModel):
     current_proficiency: float
     required_proficiency: float
     gap: float
+    baseline_hours: Optional[int] = Field(default=None, ge=1)
+    transfer_bonus: float = Field(default=0.0, ge=0, le=0.6)
 
 
 class ResourceInput(BaseModel):
@@ -45,6 +49,9 @@ class RoadmapSkillItem(BaseModel):
     skill_name: str
     priority: int = Field(..., ge=1, le=5)
     estimated_weeks: int = Field(..., ge=1)
+    baseline_hours: Optional[int] = Field(default=None, ge=1)
+    transfer_bonus: float = Field(default=0.0, ge=0, le=0.6)
+    adjusted_hours: Optional[int] = Field(default=None, ge=1)
     recommended_resources: List[RecommendedResource] = Field(default_factory=list)
 
 

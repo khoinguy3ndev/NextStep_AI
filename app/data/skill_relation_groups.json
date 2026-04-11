@@ -1,0 +1,1455 @@
+{
+  "meta": {
+    "description": "Skill relation groups inferred from job co-occurrence + aliases + text similarity.",
+    "min_co_occur": 2,
+    "min_conditional_co_occur": 0.35,
+    "min_edge_score": 0.45,
+    "total_skills": 59,
+    "total_groups": 3,
+    "total_edges": 140
+  },
+  "groups": [
+    {
+      "group_id": 1,
+      "size": 2,
+      "skills": [
+        "Azure",
+        "Oracle"
+      ]
+    },
+    {
+      "group_id": 2,
+      "size": 17,
+      "skills": [
+        "AI",
+        "BrSE",
+        "C++",
+        "C/C++",
+        "Docker",
+        "Go",
+        "Japanese",
+        "Japanese - N2",
+        "Japanese - N3",
+        "Matlab",
+        "Objective-C",
+        "Project Coordinator",
+        "Project Manager",
+        "Python",
+        "Simulink",
+        "Swift",
+        "iOS"
+      ]
+    },
+    {
+      "group_id": 3,
+      "size": 3,
+      "skills": [
+        ".NET",
+        "C#",
+        "Restful Api"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "skill_a": "C++",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 1.0,
+      "text_score": 1.0,
+      "edge_score": 1.0
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Japanese",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.5,
+      "edge_score": 0.7
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.5,
+      "edge_score": 0.7
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.333,
+      "edge_score": 0.683
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.333,
+      "edge_score": 0.683
+    },
+    {
+      "skill_a": "Oracle",
+      "skill_b": "Azure",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Matlab",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Simulink",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Python",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Docker",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Go",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "AI",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N3",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Matlab",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Simulink",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Python",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Docker",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Go",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "AI",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Simulink",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Python",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Docker",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Go",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "AI",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Matlab",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Python",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Docker",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Go",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "AI",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Simulink",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "Docker",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "Go",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "AI",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Python",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "Go",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "AI",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Docker",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "AI",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Go",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "Project Manager",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "AI",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "BrSE",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Manager",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "BrSE",
+      "skill_b": "Japanese - N2",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "BrSE",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "BrSE",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "BrSE",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "BrSE",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "BrSE",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "BrSE",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N2",
+      "skill_b": "Project Coordinator",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N2",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N2",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N2",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N2",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Japanese - N2",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Coordinator",
+      "skill_b": "Swift",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Coordinator",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Coordinator",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Coordinator",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Project Coordinator",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Swift",
+      "skill_b": "iOS",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Swift",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Swift",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Swift",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "iOS",
+      "skill_b": "Objective-C",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "iOS",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "iOS",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Objective-C",
+      "skill_b": "C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "Objective-C",
+      "skill_b": "C/C++",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "C#",
+      "skill_b": ".NET",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": "C#",
+      "skill_b": "Restful Api",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    },
+    {
+      "skill_a": ".NET",
+      "skill_b": "Restful Api",
+      "co_occurrence": 2,
+      "conditional_co_occurrence": 1.0,
+      "co_score": 1.0,
+      "alias_score": 0.0,
+      "text_score": 0.0,
+      "edge_score": 0.65
+    }
+  ]
+}

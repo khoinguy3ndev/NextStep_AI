@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
+from pathlib import Path
+import json
 import re
 
 from app.db.base_class import Base
@@ -8,12 +10,14 @@ from app.db.session import engine
 from app.db.session import get_db
 from app.models.cv_analysis_result import CvAnalysisResult
 from app.models.cv_skill import CvSkill
+from app.models.skill_course import SkillCourse
 from app.models.skill import Skill
 from app.models.skill_gap import SkillGap
 from app.schemas.analyzer import GapAnalysisRequest
 from app.schemas.cv import AnalysisHistoryItem, AnalysisHistoryResponse, CvIngestRequest, CvIngestResponse
 from app.schemas.roadmap import (
     MissingSkillInput,
+    ResourceInput,
     RoadmapGenerateRequest,
     WeakSkillInput,
 )
@@ -21,8 +25,11 @@ from app.services.analysis_service import AnalysisService
 from app.services.job_matching_service import JobMatchingService
 from app.services.pdf_processor import CvIngestService
 from app.services.roadmap_service import RoadmapService
+from app.services.skill_normalization import normalize_skill_key
 
 router = APIRouter()
+
+_RELATION_FILE = Path(__file__).resolve().parents[3] / "data" / "skill_relation_groups.json"
 
 
 def _infer_cv_title(cv_text: str) -> str | None:
@@ -69,13 +76,13 @@ def _build_skill_lookup(db: Session) -> tuple[dict[str, Skill], dict[str, Skill]
     for skill in skills:
         if not skill.name:
             continue
-        name_key = skill.name.strip().lower()
+        name_key = normalize_skill_key(skill.name)
         if name_key:
             by_name[name_key] = skill
 
         aliases = skill.aliases or []
         for alias in aliases:
-            alias_key = str(alias or "").strip().lower()
+            alias_key = normalize_skill_key(alias)
             if alias_key and alias_key not in by_alias:
                 by_alias[alias_key] = skill
 
@@ -89,6 +96,90 @@ def _label_to_priority(label: str) -> float:
     if normalized == "medium":
         return 0.75
     return 0.5
+
+
+def _load_skill_groups() -> list[set[str]]:
+    try:
+        if not _RELATION_FILE.exists():
+            return []
+        payload = json.loads(_RELATION_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    groups: list[set[str]] = []
+    for item in payload.get("groups", []):
+        skills = {
+            str(name or "").strip().lower()
+            for name in item.get("skills", [])
+            if str(name or "").strip()
+        }
+        if len(skills) >= 2:
+            groups.append(skills)
+    return groups
+
+
+def _build_duration_and_resource_index(db: Session) -> tuple[dict[str, int], dict[str, list[ResourceInput]]]:
+    rows = (
+        db.query(SkillCourse, Skill)
+        .join(Skill, Skill.skill_id == SkillCourse.skill_id)
+        .all()
+    )
+
+    baseline_hours: dict[str, int] = {}
+    resources: dict[str, list[ResourceInput]] = {}
+
+    for row_course, row_skill in rows:
+        if not row_skill or not row_skill.name:
+            continue
+        key = row_skill.name.strip().lower()
+        if not key:
+            continue
+
+        if row_course.duration_hours is not None and row_course.duration_hours > 0:
+            baseline_hours[key] = max(int(row_course.duration_hours), baseline_hours.get(key, 0))
+
+        title = (row_course.title or "").strip()
+        if not title:
+            continue
+        bucket = resources.setdefault(key, [])
+        if len(bucket) >= 3:
+            continue
+
+        bucket.append(
+            ResourceInput(
+                skill_name=row_skill.name,
+                title=title,
+                provider=row_course.platform,
+                url=row_course.url,
+                duration_hours=row_course.duration_hours,
+            )
+        )
+
+    return baseline_hours, resources
+
+
+def _transfer_bonus(skill_name: str, cv_skills: set[str], groups: list[set[str]]) -> float:
+    target = (skill_name or "").strip().lower()
+    if not target or not cv_skills:
+        return 0.0
+
+    if target in cv_skills:
+        return 0.0
+
+    best = 0.0
+    for group in groups:
+        if target not in group:
+            continue
+        related = (group - {target}).intersection(cv_skills)
+        if not related:
+            continue
+
+        ratio = len(related) / max(1, len(group) - 1)
+        score = min(0.45, 0.18 + (0.30 * ratio))
+        if score > best:
+            best = score
+
+    return round(best, 3)
 
 
 def _persist_analysis_details(
@@ -105,7 +196,7 @@ def _persist_analysis_details(
         if not raw_name:
             continue
 
-        key = raw_name.lower()
+        key = normalize_skill_key(raw_name)
         matched_skill = skill_by_name.get(key)
         confidence = 1.0
 
@@ -131,7 +222,7 @@ def _persist_analysis_details(
     gap_rows_by_skill: dict[int, SkillGap] = {}
 
     for item in gap_result.skillGap.missing:
-        skill_name = (item.skill or "").strip().lower()
+        skill_name = normalize_skill_key(item.skill)
         matched_skill = skill_by_name.get(skill_name) or skill_by_alias.get(skill_name)
         if not matched_skill:
             continue
@@ -148,7 +239,7 @@ def _persist_analysis_details(
             gap_rows_by_skill[matched_skill.skill_id] = gap_row
 
     for item in gap_result.skillGap.weak:
-        skill_name = (item.skill or "").strip().lower()
+        skill_name = normalize_skill_key(item.skill)
         matched_skill = skill_by_name.get(skill_name) or skill_by_alias.get(skill_name)
         if not matched_skill:
             continue
@@ -210,24 +301,52 @@ def _run_analysis(
     match_result = JobMatchingService.calculate_job_match(analysis_payload)
     gap_result = AnalysisService.generate_gap_analysis(analysis_payload)
 
-    roadmap_request = RoadmapGenerateRequest(
-        goal_title=f"Match {job_context.title}",
-        timeframe_weeks=timeframe_weeks,
-        max_skills_per_phase=max_skills_per_phase,
-        missing_skills=[
-            MissingSkillInput(skill=item.skill, importance=item.importance, reason=item.reason)
-            for item in gap_result.skillGap.missing
-        ],
-        weak_skills=[
+    relation_groups = _load_skill_groups()
+    baseline_hours_map, resource_map = _build_duration_and_resource_index(db)
+    cv_skill_set = {
+        normalize_skill_key(item.name)
+        for item in extracted.cv_skills
+        if normalize_skill_key(item.name)
+    }
+
+    roadmap_resources: list[ResourceInput] = []
+    for values in resource_map.values():
+        roadmap_resources.extend(values)
+
+    missing_inputs: list[MissingSkillInput] = []
+    for item in gap_result.skillGap.missing:
+        key = normalize_skill_key(item.skill)
+        missing_inputs.append(
+            MissingSkillInput(
+                skill=item.skill,
+                importance=item.importance,
+                reason=item.reason,
+                baseline_hours=baseline_hours_map.get(key),
+                transfer_bonus=_transfer_bonus(item.skill, cv_skill_set, relation_groups),
+            )
+        )
+
+    weak_inputs: list[WeakSkillInput] = []
+    for item in gap_result.skillGap.weak:
+        key = normalize_skill_key(item.skill)
+        weak_inputs.append(
             WeakSkillInput(
                 skill=item.skill,
                 current_proficiency=item.current_proficiency,
                 required_proficiency=item.required_proficiency,
                 gap=item.gap,
+                baseline_hours=baseline_hours_map.get(key),
+                transfer_bonus=_transfer_bonus(item.skill, cv_skill_set, relation_groups),
             )
-            for item in gap_result.skillGap.weak
-        ],
-        resources=[],
+        )
+
+    roadmap_request = RoadmapGenerateRequest(
+        goal_title=f"Match {job_context.title}",
+        timeframe_weeks=timeframe_weeks,
+        max_skills_per_phase=max_skills_per_phase,
+        missing_skills=missing_inputs,
+        weak_skills=weak_inputs,
+        resources=roadmap_resources,
     )
     roadmap_result = RoadmapService.generate(roadmap_request)
 
