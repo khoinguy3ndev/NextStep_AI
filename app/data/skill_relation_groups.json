@@ -1,6 +1,7 @@
 {
   "meta": {
     "description": "Skill relation groups inferred from job co-occurrence + aliases + text similarity.",
+    "difficulty_strategy": "Higher baseline_hours means harder skill; transfer becomes directional within each group.",
     "min_co_occur": 2,
     "min_conditional_co_occur": 0.35,
     "min_edge_score": 0.45,

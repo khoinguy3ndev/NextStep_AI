@@ -18,7 +18,7 @@ def start_crawling():
     db = get_standalone_db()
     urls = [
         # DÁN LINK TOPDEV VÀO ĐÂY (phải là dạng https://topdev.vn/detail-jobs/...)
-        "https://topdev.vn/detail-jobs/ky-su-phat-trien-phan-mem-c-tieng-nhat-n3-azapa-engineering-2091194?src=topdev_home&medium=superhotjobss",
+        "https://topdev.vn/detail-jobs/it-support-engineer-south-telecom-2092660?src=topdev_home&medium=superhotjobs",
     ]
 
     results = crawler_service.crawl_jobs(db, urls)

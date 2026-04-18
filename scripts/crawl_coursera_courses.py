@@ -24,6 +24,7 @@ if root_dir not in sys.path:
 from app.db.session import get_standalone_db
 from app.models.skill import Skill
 from app.models.skill_course import SkillCourse
+from app.services.course_duration_service import CourseDurationService
 from scripts.build_skill_relation_groups import build_skill_relation_groups
 
 
@@ -37,7 +38,6 @@ SKILL_CRAWL_TARGETS = [
 
 MAX_COURSES_PER_URL = 20
 PAGE_WAIT_SECONDS = 15
-DEFAULT_HOURS_PER_WEEK = 8
 MAX_CORE_COURSES_PER_SKILL = 3
 MIN_DURATION_HOURS = 4
 REPLACE_EXISTING_COURSERA_ROWS = True
@@ -89,51 +89,8 @@ def _infer_skill_from_url(search_url: str) -> str | None:
     return candidates[0].capitalize()
 
 
-def _extract_first_number(text: str) -> float | None:
-    match = re.search(r"(\d+(?:\.\d+)?)", text)
-    if not match:
-        return None
-    try:
-        return float(match.group(1))
-    except ValueError:
-        return None
-
-
-def _extract_number_range(text: str) -> tuple[float, float] | None:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)", text)
-    if not match:
-        return None
-    try:
-        return float(match.group(1)), float(match.group(2))
-    except ValueError:
-        return None
-
-
 def _duration_text_to_hours(duration_text: str | None) -> int | None:
-    text = _normalize_text(duration_text).lower()
-    if not text:
-        return None
-
-    range_value = _extract_number_range(text)
-    number = ((range_value[0] + range_value[1]) / 2) if range_value else _extract_first_number(text)
-    if number is None or number <= 0:
-        return None
-
-    if "hour" in text or "hr" in text:
-        if "per week" in text or "/week" in text:
-            if "month" in text:
-                return round(number * DEFAULT_HOURS_PER_WEEK * 4)
-            if "week" in text:
-                return round(number * DEFAULT_HOURS_PER_WEEK)
-        return round(number)
-
-    if "week" in text:
-        return round(number * DEFAULT_HOURS_PER_WEEK)
-
-    if "month" in text:
-        return round(number * DEFAULT_HOURS_PER_WEEK * 4)
-
-    return round(number)
+    return CourseDurationService.parse_duration_hours(duration_text)
 
 
 def _estimate_duration_hours(duration_text: str | None) -> int | None:
@@ -141,43 +98,7 @@ def _estimate_duration_hours(duration_text: str | None) -> int | None:
 
 
 def _extract_duration_from_text(raw_text: str) -> str | None:
-    text = _normalize_text(raw_text)
-    if not text:
-        return None
-
-    patterns = [
-        r"\b\d+(?:\.\d+)?\s*(?:hours?|hrs?)\b",
-        r"\b\d+(?:\.\d+)?\s*(?:weeks?)\b",
-        r"\b\d+(?:\.\d+)?\s*(?:months?)\b",
-        r"\bapproximately\s+\d+(?:\.\d+)?\s*(?:hours?|weeks?|months?)\b",
-    ]
-
-    lower = text.lower()
-    candidates: list[str] = []
-    for pattern in patterns:
-        for match in re.finditer(pattern, lower):
-            token = _normalize_text(match.group(0))
-            if token:
-                candidates.append(token)
-
-    if not candidates:
-        return None
-
-    unique_candidates = list(dict.fromkeys(candidates))
-    best = None
-    best_hours = -1
-    for token in unique_candidates:
-        hours = _duration_text_to_hours(token)
-        if hours is None:
-            continue
-        if hours > best_hours:
-            best = token
-            best_hours = hours
-
-    if best is not None:
-        return best
-
-    return None
+    return CourseDurationService.extract_duration_token(raw_text)
 
 
 def _is_program_url(url: str) -> bool:

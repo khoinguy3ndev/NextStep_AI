@@ -14,6 +14,7 @@ from app.db.session import get_standalone_db
 from app.models.job_skill import JobSkill
 from app.models.skill import Skill
 from app.models.skill_course import SkillCourse
+from app.services.course_duration_service import CourseDurationService
 from app.services.skill_normalization import normalize_skill_key
 
 
@@ -165,28 +166,7 @@ def tier_importance(db) -> int:
 
 
 def _parse_duration_hours(value: str | None) -> int | None:
-    text = str(value or "").strip().lower()
-    if not text:
-        return None
-
-    match = re.search(r"(\d+(?:\.\d+)?)", text)
-    if not match:
-        return None
-
-    amount = float(match.group(1))
-    if amount <= 0:
-        return None
-
-    if "week" in text or "tuần" in text:
-        return round(amount * 8)
-    if "month" in text or "tháng" in text:
-        return round(amount * 4 * 8)
-    if "day" in text or "ngày" in text:
-        return round(amount * 8)
-    if "hour" in text or "giờ" in text or "h" == text:
-        return round(amount)
-
-    return round(amount)
+    return CourseDurationService.parse_duration_hours(value)
 
 
 def seed_courses(db) -> int:
@@ -230,18 +210,17 @@ def seed_courses(db) -> int:
     return inserted
 
 
-def backfill_course_hours(db) -> int:
+def sync_course_hours(db) -> int:
     updated = 0
     rows = db.query(SkillCourse).all()
 
     for row in rows:
-        if row.duration_hours is not None:
-            continue
         parsed = _parse_duration_hours(row.duration)
         if parsed is None:
             continue
-        row.duration_hours = parsed
-        updated += 1
+        if row.duration_hours != parsed:
+            row.duration_hours = parsed
+            updated += 1
 
     db.commit()
     return updated
@@ -253,12 +232,12 @@ def main() -> None:
         aliases_updated = seed_aliases(db)
         importance_updated = tier_importance(db)
         courses_inserted = seed_courses(db)
-        course_hours_updated = backfill_course_hours(db)
+        course_hours_updated = sync_course_hours(db)
 
         print(f"aliases updated: {aliases_updated}")
         print(f"job_skills importance tiered: {importance_updated}")
         print(f"skill_courses inserted: {courses_inserted}")
-        print(f"skill_courses duration_hours backfilled: {course_hours_updated}")
+        print(f"skill_courses duration_hours synced: {course_hours_updated}")
     finally:
         db.close()
 

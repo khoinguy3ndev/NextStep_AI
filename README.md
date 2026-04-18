@@ -1,6 +1,6 @@
 # NextStep AI Server
 
-## Quick Start for BE
+## Quick Start for AI Server
 
 ### 0) Tạo file môi trường
 
@@ -13,26 +13,22 @@ Copy-Item .env.example .env
 Biến bắt buộc cần điền:
 
 - `GEMINI_API_KEY`
-- (tuỳ môi trường) `DB_PASSWORD`, `DATABASE_URL`
+- `DATABASE_URL`
 
-### 1) Chạy Database Docker từ BE (nguồn gốc)
+Khuyến nghị dùng Supabase pooler cho runtime:
 
-Chạy trong thư mục `NextStep_BE`:
+- `DB_HOST=aws-1-ap-northeast-1.pooler.supabase.com`
+- `DB_PORT=6543`
+- `DB_NAME=postgres`
+- `DB_USERNAME=postgres.<your-project-ref>`
 
-```powershell
-docker compose up -d
-```
+### 1) Kết nối database
 
-- PostgreSQL: `localhost:5444`
+AI server dùng chung database Supabase qua `DATABASE_URL`.
 
-AI server sẽ dùng chung DB này qua `DATABASE_URL`.
+Không cần chạy PostgreSQL Docker riêng cho AI server.
 
-Thông số DB hiện tại của BE mà AI đang dùng chung:
-
-- Host: `localhost`
-- Port: `5444`
-- Username: `nextstep`
-- Database: `postgres`
+Nếu cần migration trực tiếp, dùng `DATABASE_URL` từ `.env`.
 
 ### 2) Cào dữ liệu job về DB
 
@@ -50,9 +46,11 @@ python -c "from app.db.session import get_standalone_db; from app.services.embed
 
 - Bảng job đã crawl: `jobs`
 - Bảng vector: `entity_embeddings`
+- Bảng skill baseline: `skill_courses`
+- Bảng analysis: `cv_analysis_results`, `cv_skills`, `skill_gaps`
 
 ### Lưu ý quan trọng
 
-- BE là nguồn cấu hình DB chính; AI chỉ kết nối theo BE.
-- AI server đang dùng DB URL ở file `.env`, cổng chuẩn hiện tại là `5444`.
-- File [ai_job_server/docker-compose.yml](ai_job_server/docker-compose.yml) không còn tạo DB riêng; chỉ dùng để mở Adminer cùng network với BE.
+- AI server đọc `.env` trong thư mục [ai_job_server](ai_job_server) dù chạy từ đâu.
+- File [ai_job_server/docker-compose.yml](ai_job_server/docker-compose.yml) hiện chỉ để mở Adminer cùng network, không tạo DB riêng.
+- Các script crawl/seed đều ghi thẳng vào database qua SQLAlchemy session dùng chung `DATABASE_URL`.

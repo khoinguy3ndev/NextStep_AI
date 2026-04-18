@@ -23,6 +23,7 @@ from app.schemas.roadmap import (
 )
 from app.services.analysis_service import AnalysisService
 from app.services.job_matching_service import JobMatchingService
+from app.services.learning_duration_service import LearningDurationService
 from app.services.pdf_processor import CvIngestService
 from app.services.roadmap_service import RoadmapService
 from app.services.skill_normalization import normalize_skill_key
@@ -92,10 +93,22 @@ def _build_skill_lookup(db: Session) -> tuple[dict[str, Skill], dict[str, Skill]
 def _label_to_priority(label: str) -> float:
     normalized = (label or "").strip().lower()
     if normalized == "high":
-        return 1.0
+        return 0.9
     if normalized == "medium":
-        return 0.75
-    return 0.5
+        return 0.72
+    return 0.55
+
+
+def _weak_gap_priority(gap: float, current_proficiency: float, required_proficiency: float) -> float:
+    clamped_gap = max(0.0, min(1.0, float(gap)))
+    clamped_required = max(0.0, min(1.0, float(required_proficiency)))
+    clamped_current = max(0.0, min(1.0, float(current_proficiency)))
+
+    base_score = 0.35 + (clamped_gap * 0.45)
+    required_bonus = clamped_required * 0.12
+    current_penalty = clamped_current * 0.05
+
+    return round(max(0.35, min(0.95, base_score + required_bonus - current_penalty)), 3)
 
 
 def _load_skill_groups() -> list[set[str]]:
@@ -109,9 +122,9 @@ def _load_skill_groups() -> list[set[str]]:
     groups: list[set[str]] = []
     for item in payload.get("groups", []):
         skills = {
-            str(name or "").strip().lower()
+            normalize_skill_key(name)
             for name in item.get("skills", [])
-            if str(name or "").strip()
+            if normalize_skill_key(name)
         }
         if len(skills) >= 2:
             groups.append(skills)
@@ -131,7 +144,7 @@ def _build_duration_and_resource_index(db: Session) -> tuple[dict[str, int], dic
     for row_course, row_skill in rows:
         if not row_skill or not row_skill.name:
             continue
-        key = row_skill.name.strip().lower()
+        key = normalize_skill_key(row_skill.name)
         if not key:
             continue
 
@@ -158,28 +171,64 @@ def _build_duration_and_resource_index(db: Session) -> tuple[dict[str, int], dic
     return baseline_hours, resources
 
 
-def _transfer_bonus(skill_name: str, cv_skills: set[str], groups: list[set[str]]) -> float:
-    target = (skill_name or "").strip().lower()
+def _skill_hours(skill_name: str, baseline_hours_map: dict[str, int]) -> int:
+    key = normalize_skill_key(skill_name)
+    if key in baseline_hours_map:
+        return int(baseline_hours_map[key])
+
+    hours, _, _ = LearningDurationService.get_reference_baseline(skill_name)
+    return int(hours)
+
+
+def _directional_factor(source_hours: int, target_hours: int) -> float:
+    if source_hours <= 0 or target_hours <= 0:
+        return 1.0
+
+    ratio = source_hours / target_hours
+    if ratio < 0.55:
+        return 0.55
+    if ratio > 1.25:
+        return 1.25
+    return round(ratio, 3)
+
+
+def _transfer_bonus(
+    skill_name: str,
+    cv_skills: set[str],
+    groups: list[set[str]],
+    baseline_hours_map: dict[str, int],
+) -> tuple[float, float]:
+    target = normalize_skill_key(skill_name)
     if not target or not cv_skills:
-        return 0.0
+        return 0.0, 1.0
 
     if target in cv_skills:
-        return 0.0
+        return 0.0, 1.0
 
-    best = 0.0
+    target_hours = _skill_hours(target, baseline_hours_map)
+    best_effective = 0.0
+    best_base = 0.0
+    best_direction = 1.0
     for group in groups:
         if target not in group:
             continue
-        related = (group - {target}).intersection(cv_skills)
+        related = sorted((group - {target}).intersection(cv_skills))
         if not related:
             continue
 
         ratio = len(related) / max(1, len(group) - 1)
-        score = min(0.45, 0.18 + (0.30 * ratio))
-        if score > best:
-            best = score
+        base_score = min(0.45, 0.18 + (0.30 * ratio))
 
-    return round(best, 3)
+        for source in related:
+            source_hours = _skill_hours(source, baseline_hours_map)
+            direction = _directional_factor(source_hours, target_hours)
+            score = round(base_score * direction, 3)
+            if score > best_effective:
+                best_effective = score
+                best_base = base_score
+                best_direction = direction
+
+    return round(best_base, 3), round(best_direction, 3)
 
 
 def _persist_analysis_details(
@@ -244,7 +293,11 @@ def _persist_analysis_details(
         if not matched_skill:
             continue
 
-        priority = max(0.4, min(1.0, float(item.gap)))
+        priority = _weak_gap_priority(
+            gap=item.gap,
+            current_proficiency=item.current_proficiency,
+            required_proficiency=item.required_proficiency,
+        )
         reason = f"Current {item.current_proficiency:.2f}, required {item.required_proficiency:.2f}, gap {item.gap:.2f}"
         gap_row = SkillGap(
             analysis_id=analysis_id,
@@ -316,19 +369,22 @@ def _run_analysis(
     missing_inputs: list[MissingSkillInput] = []
     for item in gap_result.skillGap.missing:
         key = normalize_skill_key(item.skill)
+        transfer_bonus, direction_factor = _transfer_bonus(item.skill, cv_skill_set, relation_groups, baseline_hours_map)
         missing_inputs.append(
             MissingSkillInput(
                 skill=item.skill,
                 importance=item.importance,
                 reason=item.reason,
                 baseline_hours=baseline_hours_map.get(key),
-                transfer_bonus=_transfer_bonus(item.skill, cv_skill_set, relation_groups),
+                transfer_bonus=transfer_bonus,
+                transfer_direction_factor=direction_factor,
             )
         )
 
     weak_inputs: list[WeakSkillInput] = []
     for item in gap_result.skillGap.weak:
         key = normalize_skill_key(item.skill)
+        transfer_bonus, direction_factor = _transfer_bonus(item.skill, cv_skill_set, relation_groups, baseline_hours_map)
         weak_inputs.append(
             WeakSkillInput(
                 skill=item.skill,
@@ -336,7 +392,8 @@ def _run_analysis(
                 required_proficiency=item.required_proficiency,
                 gap=item.gap,
                 baseline_hours=baseline_hours_map.get(key),
-                transfer_bonus=_transfer_bonus(item.skill, cv_skill_set, relation_groups),
+                transfer_bonus=transfer_bonus,
+                transfer_direction_factor=direction_factor,
             )
         )
 

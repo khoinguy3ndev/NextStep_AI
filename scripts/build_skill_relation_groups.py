@@ -17,6 +17,7 @@ if root_dir not in sys.path:
 from app.db.session import get_standalone_db
 from app.models.job_skill import JobSkill
 from app.models.skill import Skill
+from app.services.learning_duration_service import LearningDurationService
 from app.services.skill_normalization import normalize_skill_key, skill_similarity, tokenize_skill
 
 OUTPUT_FILE = Path(root_dir) / "app" / "data" / "skill_relation_groups.json"
@@ -209,17 +210,34 @@ def build_skill_relation_groups() -> dict:
         grouped_skills = []
         for idx, component in enumerate(components, start=1):
             names = [skills[sid].name for sid in component if sid in skills]
+            ordered = []
+            for rank, name in enumerate(
+                sorted(names, key=lambda item: LearningDurationService.get_reference_baseline(item)[0], reverse=True),
+                start=1,
+            ):
+                difficulty_hours, reference_range, source_note = LearningDurationService.get_reference_baseline(name)
+                ordered.append(
+                    {
+                        "skill": name,
+                        "difficulty_rank": rank,
+                        "difficulty_hours": difficulty_hours,
+                        "reference_range_hours": list(reference_range),
+                        "source_note": source_note,
+                    }
+                )
             grouped_skills.append(
                 {
                     "group_id": idx,
                     "size": len(names),
                     "skills": sorted(names),
+                    "ordered_skills": ordered,
                 }
             )
 
         payload = {
             "meta": {
                 "description": "Skill relation groups inferred from job co-occurrence + aliases + text similarity.",
+                "difficulty_strategy": "Higher baseline_hours means harder skill; transfer becomes directional within each group.",
                 "min_co_occur": MIN_CO_OCCUR,
                 "min_conditional_co_occur": MIN_CONDITIONAL_CO_OCCUR,
                 "min_edge_score": MIN_EDGE_SCORE,

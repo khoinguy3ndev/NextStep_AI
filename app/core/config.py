@@ -1,24 +1,63 @@
+from pathlib import Path
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
-    # Thông tin App
     APP_NAME: str = "AI Job Matching Server"
     DEBUG: bool = True
-    
-    # Database
+
     DATABASE_URL: str
-    
-    # AI API (Gemini)
+
     GEMINI_API_KEY: str
     CV_AI_ENRICHMENT_ENABLED: bool = True
 
-    # Các biến bảo mật từ Backend bạn của bạn gửi
     JWT_ACCESS_SECRET: str
     JWT_ACCESS_EXPIRES_IN: str
 
-    # Tự động đọc từ file .env
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(BASE_DIR / ".env", BASE_DIR / ".env.production"),
+        extra="ignore",
+    )
 
-# Khởi tạo object dùng chung toàn server
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug_value(cls, value):
+        if isinstance(value, bool):
+            return value
+
+        normalized = str(value or "").strip().lower()
+        if normalized in {"1", "true", "yes", "on", "debug", "development", "dev"}:
+            return True
+        if normalized in {"0", "false", "no", "off", "release", "production", "prod"}:
+            return False
+        return value
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def sanitize_database_url(cls, value):
+        raw = str(value or "").strip()
+        if not raw:
+            return raw
+
+        # Some external tools append pgbouncer=true, which psycopg2 rejects.
+        if "?" not in raw or "pgbouncer" not in raw.lower():
+            return raw
+
+        base, query = raw.split("?", 1)
+        kept_parts: list[str] = []
+        for part in query.split("&"):
+            key = part.split("=", 1)[0].strip().lower()
+            if key == "pgbouncer":
+                continue
+            if part.strip():
+                kept_parts.append(part.strip())
+
+        return f"{base}?{'&'.join(kept_parts)}" if kept_parts else base
+
+
 settings = Settings()

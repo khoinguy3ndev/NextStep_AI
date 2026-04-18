@@ -55,6 +55,21 @@ class LearningDurationService:
         return index
 
     @classmethod
+    def get_reference_baseline(cls, skill_name: str) -> tuple[int, tuple[int, int], str]:
+        index = cls._build_index()
+        key = cls._normalize_skill(skill_name)
+        baseline = index.get(key)
+
+        base_hours = int(baseline["baseline_hours"]) if baseline else cls.DEFAULT_BASELINE_HOURS
+        reference_range = (
+            tuple(baseline.get("reference_range_hours", [max(20, base_hours - 20), base_hours + 20]))
+            if baseline
+            else (max(20, base_hours - 20), base_hours + 20)
+        )
+        note = "baseline_from_reference" if baseline else "fallback_baseline_no_reference_match"
+        return base_hours, (int(reference_range[0]), int(reference_range[1])), note
+
+    @classmethod
     def estimate_skill_duration(
         cls,
         skill_name: str,
@@ -62,12 +77,7 @@ class LearningDurationService:
         importance: str = "medium",
         hours_per_week: int = DEFAULT_HOURS_PER_WEEK,
     ) -> SkillDurationEstimate:
-        index = cls._build_index()
-        key = cls._normalize_skill(skill_name)
-        baseline = index.get(key)
-
-        base_hours = int(baseline["baseline_hours"]) if baseline else cls.DEFAULT_BASELINE_HOURS
-        reference_range = tuple(baseline.get("reference_range_hours", [max(20, base_hours - 20), base_hours + 20])) if baseline else (max(20, base_hours - 20), base_hours + 20)
+        base_hours, reference_range, note = cls.get_reference_baseline(skill_name)
 
         normalized_gap = max(0.0, min(gap_value, 1.0))
         gap_factor = 1.0 + (normalized_gap * 0.8)
@@ -78,10 +88,6 @@ class LearningDurationService:
         adjusted_hours = max(1, round(base_hours * gap_factor * importance_factor))
         weekly_hours = max(1, hours_per_week)
         estimated_weeks = math.ceil(adjusted_hours / weekly_hours)
-
-        note = "baseline_from_reference"
-        if baseline is None:
-            note = "fallback_baseline_no_reference_match"
 
         return SkillDurationEstimate(
             skill=skill_name,

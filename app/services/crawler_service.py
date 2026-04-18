@@ -3,12 +3,13 @@ import re
 import time
 import json
 import unicodedata
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from html import unescape
 from typing import Iterable
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
+from bs4.element import NavigableString, Tag
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
@@ -22,12 +23,64 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.company import Company
-from app.models.job import Currency, Job, JobStatus
+from app.models.job import Currency, Job, JobLevel, JobStatus
 from app.models.job_skill import JobSkill
 from app.models.skill import Skill
 
 
 class JobCrawler:
+    _SECTION_PATTERNS: dict[str, tuple[str, ...]] = {
+        "role_responsibilities": (
+            "your role & responsibilities",
+            "your role and responsibilities",
+            "our role & responsibilities",
+            "our role and responsibilities",
+            "role & responsibilities",
+            "role and responsibilities",
+            "responsibilities",
+            "job responsibilities",
+            "job description",
+            "key responsibilities",
+            "main responsibilities",
+            "what you will do",
+            "what you'll do",
+            "mo ta cong viec",
+            "trach nhiem",
+            "nhiem vu",
+        ),
+        "skills_qualifications": (
+            "your skills & qualifications",
+            "your skills and qualifications",
+            "skills & qualifications",
+            "skills and qualifications",
+            "qualifications",
+            "requirements",
+            "job requirements",
+            "required qualifications",
+            "experience and qualifications",
+            "required domain knowledge",
+            "technical and ba related competencies",
+            "your profile",
+            "what we're looking for",
+            "what we are looking for",
+            "yeu cau",
+            "ky nang va yeu cau",
+        ),
+        "benefits": (
+            "benefits",
+            "benefits and perks",
+            "what we offer",
+            "what we can offer",
+            "why you'll love working here",
+            "why you will love working here",
+            "salary and benefits",
+            "perks",
+            "working time and location",
+            "quyen loi",
+            "phuc loi",
+        ),
+    }
+
     def __init__(self) -> None:
         self._user_agent = (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -89,7 +142,9 @@ class JobCrawler:
         parsed = urlparse(url)
         hostname = parsed.netloc.lower()
         path = parsed.path.lower()
-        return "topdev.vn" in hostname and "/detail-jobs/" in path
+        if "topdev.vn" not in hostname:
+            return False
+        return "/detail-jobs/" in path or "/viec-lam/" in path
 
     @staticmethod
     def _first_non_empty(values: list[str]) -> str:
@@ -102,6 +157,304 @@ class JobCrawler:
     def _clean_lines(text: str) -> str:
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         return "\n".join(lines)
+
+    @staticmethod
+    def _normalize_section_heading(text: str) -> str:
+        value = JobCrawler._strip_accents(text or "").lower()
+        value = re.sub(r"^\s*\d+\s*", "", value)
+        value = value.replace("&", " and ")
+        value = re.sub(r"[^a-z0-9]+", " ", value)
+        return re.sub(r"\s+", " ", value).strip()
+
+    @staticmethod
+    def _clean_section_text(text: str) -> str:
+        cleaned = BeautifulSoup(text or "", "html.parser").get_text("\n", strip=True)
+        cleaned = cleaned.replace("\xa0", " ")
+        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+        return cleaned.strip()
+
+    @staticmethod
+    def _normalize_inline_text(text: str) -> str:
+        if not text:
+            return ""
+        text = unescape(text).replace("\xa0", " ")
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    @classmethod
+    def _node_text(cls, node: Tag | NavigableString | None) -> str:
+        if node is None:
+            return ""
+        if isinstance(node, NavigableString):
+            return cls._normalize_inline_text(str(node))
+        return cls._normalize_inline_text(node.get_text(" ", strip=True))
+
+    @classmethod
+    def _direct_text_from_tag(cls, tag: Tag) -> str:
+        fragments: list[str] = []
+
+        for child in tag.contents:
+            if isinstance(child, NavigableString):
+                text = cls._normalize_inline_text(str(child))
+                if text:
+                    fragments.append(text)
+                continue
+
+            if not isinstance(child, Tag):
+                continue
+
+            if child.name in {"ul", "ol"}:
+                continue
+
+            text = cls._direct_text_from_tag(child)
+            if text:
+                fragments.append(text)
+
+        return cls._normalize_inline_text(" ".join(fragments))
+
+    @classmethod
+    def _format_html_list(cls, list_tag: Tag, depth: int = 0) -> list[str]:
+        lines: list[str] = []
+        top_level_bullet = "-"
+        child_bullet = "•" if list_tag.name == "ul" else "◦"
+
+        for item in list_tag.find_all("li", recursive=False):
+            fragments: list[str] = []
+
+            for child in item.contents:
+                if isinstance(child, NavigableString):
+                    text = cls._normalize_inline_text(str(child))
+                    if text:
+                        fragments.append(text)
+                    continue
+
+                if not isinstance(child, Tag):
+                    continue
+
+                if child.name in {"ul", "ol"}:
+                    continue
+
+                text = cls._node_text(child)
+                if text:
+                    fragments.append(text)
+
+            item_text = cls._normalize_inline_text(" ".join(fragments))
+            if item_text:
+                if depth == 0:
+                    lines.append(f"{top_level_bullet} {item_text}")
+                else:
+                    indent = "\xa0" * (4 * depth)
+                    lines.append(f"{indent}{child_bullet} {item_text}")
+
+            for nested_list in item.find_all(["ul", "ol"], recursive=False):
+                lines.extend(cls._format_html_list(nested_list, depth + 1))
+
+        return lines
+
+    @classmethod
+    def _format_section_content(cls, html: str) -> str:
+        soup = BeautifulSoup(html or "", "html.parser")
+        root = soup.body or soup
+        lines: list[str] = []
+
+        def append_line(text: str, *, force_blank_before: bool = False) -> None:
+            normalized = cls._normalize_inline_text(text)
+            if not normalized:
+                return
+            if force_blank_before and lines and lines[-1] != "":
+                lines.append("")
+            lines.append(normalized)
+
+        def append_nested_lists(tag: Tag) -> None:
+            for nested_list in tag.find_all(["ul", "ol"], recursive=False):
+                if lines and lines[-1] != "":
+                    previous = lines[-1].rstrip()
+                    if not previous.endswith(":"):
+                        lines.append("")
+                lines.extend(cls._format_html_list(nested_list))
+
+        for child in root.children:
+            if isinstance(child, NavigableString):
+                append_line(str(child))
+                continue
+
+            if not isinstance(child, Tag):
+                continue
+
+            if child.name in {"ul", "ol"}:
+                if lines and lines[-1] != "":
+                    previous = lines[-1].rstrip()
+                    if not previous.endswith(":"):
+                        lines.append("")
+                lines.extend(cls._format_html_list(child))
+                continue
+
+            if child.name == "br":
+                if lines and lines[-1] != "":
+                    lines.append("")
+                continue
+
+            if child.name in {"p", "div"}:
+                text = cls._direct_text_from_tag(child)
+                if text:
+                    append_line(text, force_blank_before=bool(lines))
+                append_nested_lists(child)
+                continue
+
+            text = cls._direct_text_from_tag(child)
+            if text:
+                append_line(text, force_blank_before=bool(lines))
+            append_nested_lists(child)
+
+        formatted = "\n".join(line.rstrip() for line in lines).strip()
+        formatted = re.sub(r"\n{3,}", "\n\n", formatted)
+        return formatted
+
+    def _classify_section_heading(self, text: str) -> str | None:
+        normalized = self._normalize_section_heading(text)
+        if not normalized:
+            return None
+
+        for section_name, candidates in self._SECTION_PATTERNS.items():
+            for candidate in candidates:
+                candidate_normalized = self._normalize_section_heading(candidate)
+                if normalized == candidate_normalized:
+                    return section_name
+                if candidate_normalized in normalized or normalized in candidate_normalized:
+                    return section_name
+        return None
+
+    def _looks_like_heading_only_content(self, content_text: str, section_key: str | None = None) -> bool:
+        normalized = self._normalize_section_heading(content_text)
+        if not normalized:
+            return True
+
+        if section_key:
+            for candidate in self._SECTION_PATTERNS.get(section_key, ()):
+                candidate_normalized = self._normalize_section_heading(candidate)
+                if normalized == candidate_normalized:
+                    return True
+
+        candidate_headings = [
+            "required domain knowledge",
+            "technical awareness",
+            "business analysis competencies",
+            "job requirements",
+            "required qualifications",
+            "preferred qualifications",
+            "benefits",
+            "job description",
+        ]
+        for candidate in candidate_headings:
+            candidate_normalized = self._normalize_section_heading(candidate)
+            if normalized == candidate_normalized:
+                return True
+
+        if "\n" not in content_text and len(content_text.split()) <= 6:
+            return True
+
+        return False
+
+    @classmethod
+    def _unwrap_section_content_node(cls, node: Tag | None) -> Tag | None:
+        current = node
+        while isinstance(current, Tag):
+            has_direct_list = any(
+                isinstance(child, Tag) and child.name in {"ul", "ol"}
+                for child in current.contents
+            )
+            child_tags = [child for child in current.contents if isinstance(child, Tag)]
+            has_direct_non_wrapper_text = False
+
+            for child in current.contents:
+                if isinstance(child, NavigableString):
+                    if cls._normalize_inline_text(str(child)):
+                        has_direct_non_wrapper_text = True
+                        break
+                    continue
+
+                if not isinstance(child, Tag):
+                    continue
+
+                if child.name in {"ul", "ol", "div", "section", "article"}:
+                    continue
+
+                if cls._node_text(child):
+                    has_direct_non_wrapper_text = True
+                    break
+
+            if has_direct_non_wrapper_text or has_direct_list or len(child_tags) != 1:
+                return current
+
+            next_child = child_tags[0]
+            if next_child.name not in {"div", "section", "article"}:
+                return current
+
+            current = next_child
+
+        return node
+
+    def _extract_structured_sections(self, soup: BeautifulSoup) -> dict[str, str]:
+        sections: dict[str, str] = {}
+
+        containers = soup.select("div.border-text-200")
+        if not containers:
+            containers = soup.select("article, main, div[class*='job-description']")
+
+        for container in containers:
+            heading_candidates = container.select(
+                "span.flex.items-center.gap-1.font-semibold, "
+                "span.mt-4.flex.items-center.gap-1.font-semibold, "
+                "span.font-semibold.text-\\[\\#3659B3\\], "
+                "span.font-semibold, "
+                "h2, h3, h4, "
+                "p > strong, div > strong"
+            )
+
+            for heading in heading_candidates:
+                heading_text = heading.get_text(" ", strip=True)
+                section_key = self._classify_section_heading(heading_text)
+                if not section_key or section_key in sections:
+                    continue
+
+                content_node = heading.find_next_sibling("div")
+                content_text = ""
+
+                while content_node:
+                    if not content_node.get_text(" ", strip=True):
+                        content_node = content_node.find_next_sibling("div")
+                        continue
+
+                    content_target = self._unwrap_section_content_node(content_node)
+                    candidate_text = self._format_section_content(str(content_target))
+                    if not candidate_text or self._looks_like_heading_only_content(candidate_text, section_key):
+                        next_content = content_node.find_next_sibling("div")
+                        if next_content is None:
+                            break
+                        content_node = next_content
+                        continue
+
+                    content_text = candidate_text
+                    break
+
+                if not content_node or not content_text:
+                    continue
+
+                next_heading = content_node.find_next(
+                    lambda tag: getattr(tag, "name", None) == "span"
+                    and self._classify_section_heading(tag.get_text(" ", strip=True)) is not None
+                )
+                if next_heading and next_heading is not heading:
+                    next_heading_text = next_heading.get_text(" ", strip=True)
+                    if content_text == self._clean_section_text(next_heading_text):
+                        continue
+
+                sections[section_key] = content_text
+
+            if len(sections) >= 2:
+                return sections
+
+        return sections
 
     @staticmethod
     def _dedupe_preserve_order(values: list[str]) -> list[str]:
@@ -238,6 +591,84 @@ class JobCrawler:
         return company_name or "N/A"
 
     def _extract_location(self, soup: BeautifulSoup, job_posting: dict | None = None) -> str:
+        def compact_location(text: str) -> str:
+            value = re.sub(r"\s+", " ", (text or "").replace("\xa0", " ")).strip(" ,")
+            if not value:
+                return ""
+
+            normalized = self._strip_accents(value).lower()
+            if "," in value:
+                parts = [part.strip() for part in value.split(",") if part.strip()]
+                district_markers = ("quan ", "q.", "district ", "huyen ", "h.", "phuong ", "p.", "ward ")
+                city_markers = (
+                    "ho chi minh",
+                    "tp ho chi minh",
+                    "thanh pho ho chi minh",
+                    "ha noi",
+                    "thanh pho ha noi",
+                    "da nang",
+                    "thanh pho da nang",
+                    "can tho",
+                    "hai phong",
+                )
+
+                if len(parts) >= 2:
+                    head_normalized = self._strip_accents(parts[0]).lower()
+                    tail_normalized = self._strip_accents(parts[-1]).lower()
+                    if any(marker in head_normalized for marker in district_markers) and any(
+                        marker in tail_normalized for marker in city_markers
+                    ):
+                        return f"{parts[0]}, {parts[-1]}"
+
+            city_aliases: list[tuple[str, tuple[str, ...]]] = [
+                ("Hồ Chí Minh", ("ho chi minh", "tp ho chi minh", "thanh pho ho chi minh", "sai gon")),
+                ("Hà Nội", ("ha noi", "thanh pho ha noi")),
+                ("Đà Nẵng", ("da nang", "thanh pho da nang")),
+                ("Cần Thơ", ("can tho", "thanh pho can tho")),
+                ("Hải Phòng", ("hai phong", "thanh pho hai phong")),
+            ]
+
+            for canonical, aliases in city_aliases:
+                for alias in aliases:
+                    if alias in normalized:
+                        return canonical
+
+            if "," in value:
+                tail = [part.strip() for part in value.split(",") if part.strip()]
+                if tail:
+                    return tail[-1]
+
+            return value
+
+        header_selectors = [
+            "div.sticky span.line-clamp-1",
+            "div.sticky span.flex.items-center.gap-1.text-xs\\[12px\\].font-medium.text-text-500",
+            "div.sticky span.flex.items-center.gap-1.text-sm",
+        ]
+
+        header_location_candidates: list[str] = []
+        for selector in header_selectors:
+            for element in soup.select(selector):
+                text = element.get_text(" ", strip=True)
+                if not text:
+                    continue
+                normalized = self._strip_accents(text).lower()
+                if any(keyword in normalized for keyword in ["fulltime", "parttime", "remote", "hybrid", "intern", "junior", "middle", "mid", "senior", "lead", "nam", "year"]):
+                    continue
+                if len(text) <= 80 and (
+                    "hồ chí minh" in normalized
+                    or "ha noi" in normalized
+                    or "đà nẵng" in text.lower()
+                    or "da nang" in normalized
+                    or "can tho" in normalized
+                    or "viet nam" in normalized
+                ):
+                    header_location_candidates.append(text)
+
+        header_location = self._first_non_empty(header_location_candidates)
+        if header_location:
+            return compact_location(header_location)
+
         if job_posting:
             job_location = job_posting.get("jobLocation")
             if isinstance(job_location, list):
@@ -253,7 +684,7 @@ class JobCrawler:
                     ]
                     location = ", ".join([part for part in parts if part])
                     if location:
-                        return location
+                        return compact_location(location)
 
         selectors = [
             "[data-testid='job-location']",
@@ -268,7 +699,7 @@ class JobCrawler:
                 values.append(element.get_text(" ", strip=True))
 
         location = self._first_non_empty(values)
-        return location or "Việt Nam"
+        return compact_location(location) or "Việt Nam"
 
     def _extract_salary(self, soup: BeautifulSoup, job_posting: dict | None = None) -> str:
         if job_posting:
@@ -306,6 +737,186 @@ class JobCrawler:
                 values.append(salary_match.group(0))
 
         return self._first_non_empty(values)
+
+    @staticmethod
+    def _map_job_level(raw_text: str | None) -> JobLevel | None:
+        normalized = JobCrawler._strip_accents(raw_text or "").lower()
+        normalized = re.sub(r"[^a-z0-9\s/+()-]", " ", normalized)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+        if not normalized:
+            return None
+
+        level_patterns: list[tuple[JobLevel, tuple[str, ...]]] = [
+            (JobLevel.lead, ("team lead", "tech lead", "leader", "lead", "principal", "manager")),
+            (JobLevel.senior, ("senior", "sr", "expert", "specialist")),
+            (JobLevel.mid, ("middle", "mid level", "mid-level", "mid", "intermediate")),
+            (JobLevel.junior, ("junior", "jr", "fresher", "entry level", "entry-level")),
+            (JobLevel.intern, ("intern", "internship", "trainee")),
+        ]
+
+        for level, keywords in level_patterns:
+            for keyword in keywords:
+                keyword_normalized = JobCrawler._strip_accents(keyword).lower()
+                if re.search(rf"(?<!\w){re.escape(keyword_normalized)}(?!\w)", normalized):
+                    return level
+
+        return None
+
+    def _extract_level(self, soup: BeautifulSoup, title: str = "", job_posting: dict | None = None) -> JobLevel | None:
+        if job_posting:
+            experience_requirements = job_posting.get("experienceRequirements")
+            if isinstance(experience_requirements, str):
+                mapped = self._map_job_level(experience_requirements)
+                if mapped:
+                    return mapped
+
+            seniority = job_posting.get("seniority")
+            if isinstance(seniority, str):
+                mapped = self._map_job_level(seniority)
+                if mapped:
+                    return mapped
+
+        selectors = [
+            "div.sticky span.flex.items-center.gap-1.text-xs\\[12px\\].font-medium.text-text-500",
+            "div.sticky span.flex.items-center.gap-1.text-sm",
+            "div.sticky div.my-2 span",
+        ]
+
+        candidate_texts: list[str] = []
+        for selector in selectors:
+            for element in soup.select(selector):
+                text = element.get_text(" ", strip=True)
+                if text:
+                    candidate_texts.append(text)
+
+        if title:
+            candidate_texts.append(title)
+
+        for text in candidate_texts:
+            mapped = self._map_job_level(text)
+            if mapped:
+                return mapped
+
+        return None
+
+    @staticmethod
+    def _map_employment_type(raw_text: str | None) -> str | None:
+        normalized = JobCrawler._strip_accents(raw_text or "").lower()
+        normalized = re.sub(r"[^a-z0-9\s/+()-]", " ", normalized)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+        if not normalized:
+            return None
+
+        employment_patterns: list[tuple[str, tuple[str, ...]]] = [
+            ("Fulltime", ("fulltime", "full time", "toan thoi gian")),
+            ("Part-time", ("part time", "part-time", "ban thoi gian")),
+            ("Contract", ("contract", "hop dong")),
+            ("Internship", ("internship", "intern", "thuc tap")),
+            ("Remote", ("remote", "lam viec tu xa")),
+            ("Hybrid", ("hybrid",)),
+            ("Freelance", ("freelance",)),
+        ]
+
+        for canonical, keywords in employment_patterns:
+            for keyword in keywords:
+                keyword_normalized = JobCrawler._strip_accents(keyword).lower()
+                if re.search(rf"(?<!\w){re.escape(keyword_normalized)}(?!\w)", normalized):
+                    return canonical
+
+        return None
+
+    def _extract_employment_type(self, soup: BeautifulSoup, job_posting: dict | None = None) -> str | None:
+        if job_posting:
+            employment_type = job_posting.get("employmentType")
+            if isinstance(employment_type, list):
+                for item in employment_type:
+                    if isinstance(item, str):
+                        mapped = self._map_employment_type(item)
+                        if mapped:
+                            return mapped
+            elif isinstance(employment_type, str):
+                mapped = self._map_employment_type(employment_type)
+                if mapped:
+                    return mapped
+
+        selectors = [
+            "div.sticky span.flex.items-center.gap-1.text-xs\\[12px\\].font-medium.text-text-500",
+            "div.sticky span.flex.items-center.gap-1.text-sm",
+            "div.sticky div.my-2 span",
+        ]
+
+        for selector in selectors:
+            for element in soup.select(selector):
+                text = element.get_text(" ", strip=True)
+                mapped = self._map_employment_type(text)
+                if mapped:
+                    return mapped
+
+        return None
+
+    @staticmethod
+    def _extract_experience(soup: BeautifulSoup, job_posting: dict | None = None) -> str | None:
+        if job_posting:
+            experience_requirements = job_posting.get("experienceRequirements")
+            if isinstance(experience_requirements, str):
+                cleaned = re.sub(r"\s+", " ", experience_requirements).strip()
+                if cleaned:
+                    year_match = re.search(r"(\d+\+?\s*(?:năm|years?|yrs?))", cleaned, re.IGNORECASE)
+                    if year_match:
+                        return year_match.group(1).strip()
+
+        selectors = [
+            "div.sticky span.flex.items-center.gap-1.text-xs\\[12px\\].font-medium.text-text-500",
+            "div.sticky span.flex.items-center.gap-1.text-sm",
+            "div.sticky div.my-2 span",
+        ]
+
+        for selector in selectors:
+            for element in soup.select(selector):
+                text = element.get_text(" ", strip=True)
+                if not text:
+                    continue
+                match = re.search(r"(\d+\+?\s*(?:năm|years?|yrs?))", text, re.IGNORECASE)
+                if match:
+                    return match.group(1).strip()
+
+        return None
+
+    @staticmethod
+    def _extract_application_deadline(soup: BeautifulSoup, job_posting: dict | None = None) -> date | None:
+        if job_posting:
+            valid_through = job_posting.get("validThrough")
+            if isinstance(valid_through, str) and valid_through.strip():
+                raw_value = valid_through.strip()
+                for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S"):
+                    try:
+                        if "%z" in fmt or "T" in fmt:
+                            return datetime.strptime(raw_value, fmt).date()
+                        return datetime.strptime(raw_value, fmt).date()
+                    except ValueError:
+                        continue
+
+        deadline_text_candidates: list[str] = []
+        selectors = [
+            "div.sticky span.break-none",
+            "div.sticky span.whitespace-nowrap",
+            "div.sticky span",
+        ]
+        for selector in selectors:
+            for element in soup.select(selector):
+                text = element.get_text(" ", strip=True)
+                if text and "deadline" in text.lower():
+                    deadline_text_candidates.append(text)
+
+        for text in deadline_text_candidates:
+            match = re.search(r"(\d{2}-\d{2}-\d{4})", text)
+            if match:
+                try:
+                    return datetime.strptime(match.group(1), "%d-%m-%Y").date()
+                except ValueError:
+                    continue
+
+        return None
 
     def _extract_skill_tags_from_page(self, soup: BeautifulSoup) -> list[str]:
         selectors = [
@@ -667,7 +1278,7 @@ class JobCrawler:
         driver = None
         try:
             if not self.is_topdev_detail_url(url):
-                raise ValueError("Chỉ hỗ trợ crawl link TopDev dạng /detail-jobs/")
+                raise ValueError("Chỉ hỗ trợ crawl link TopDev dạng /detail-jobs/ hoặc /viec-lam/")
 
             print(f"DEBUG: Bắt đầu crawl Selenium: {url}")
             driver = self._create_driver()
@@ -688,8 +1299,13 @@ class JobCrawler:
 
             company_name = self._extract_company(soup, job_posting)
             location = self._extract_location(soup, job_posting)
+            level = self._extract_level(soup, title, job_posting)
+            employment_type = self._extract_employment_type(soup, job_posting)
+            experience = self._extract_experience(soup, job_posting)
+            application_deadline = self._extract_application_deadline(soup, job_posting)
             salary_range = self._extract_salary(soup, job_posting)
             description = self._extract_description(soup, job_posting)
+            structured_sections = self._extract_structured_sections(soup)
             skills_list = self._extract_skills(soup, description, title, job_posting)
             skill_details = self._build_skill_details(skills_list, description, title)
 
@@ -704,11 +1320,18 @@ class JobCrawler:
                 "title": title,
                 "company_name": company_name,
                 "location": location,
+                "level": level.value if level else None,
+                "employment_type": employment_type,
+                "experience": experience,
+                "application_deadline": application_deadline.isoformat() if application_deadline else None,
                 "salary_range": salary_range,
                 "description": description,
+                "role_responsibilities": structured_sections.get("role_responsibilities"),
+                "skills_qualifications": structured_sections.get("skills_qualifications"),
+                "benefits": structured_sections.get("benefits"),
                 "job_requirements": ", ".join(skills_list) if skills_list else "Không tìm thấy kỹ năng",
                 "job_skill_details": skill_details,
-                "source_url": url,
+                "source_url": driver.current_url if driver is not None else url,
                 "source_website": self._source_name_topdev(),
             }
         except (WebDriverException, TimeoutException, ValueError) as exc:
@@ -750,6 +1373,17 @@ class JobCrawler:
                 if len(parsed) == 1:
                     return parsed[0], parsed[0], currency
                 return min(parsed), max(parsed), currency
+
+            def parse_deadline(raw_deadline: str | None) -> date | None:
+                if not raw_deadline:
+                    return None
+                raw_deadline = raw_deadline.strip()
+                for fmt in ("%Y-%m-%d", "%d-%m-%Y"):
+                    try:
+                        return datetime.strptime(raw_deadline, fmt).date()
+                    except ValueError:
+                        continue
+                return None
 
             def upsert_company(company_name: str, location: str | None) -> Company:
                 cleaned_name = (company_name or "N/A").strip() or "N/A"
@@ -870,20 +1504,34 @@ class JobCrawler:
                     )
 
             salary_min, salary_max, currency = parse_salary_fields(job_data.get("salary_range"))
+            level = self._map_job_level(job_data.get("level"))
+            employment_type = (job_data.get("employment_type") or "").strip() or None
+            experience = (job_data.get("experience") or "").strip() or None
+            application_deadline = parse_deadline(job_data.get("application_deadline"))
             raw_description = job_data.get("description") or ""
             cleaned_description = self._clean_lines(raw_description)
+            role_responsibilities = (job_data.get("role_responsibilities") or "").strip() or None
+            skills_qualifications = (job_data.get("skills_qualifications") or "").strip() or None
+            benefits = (job_data.get("benefits") or "").strip() or None
             company = upsert_company(job_data.get("company_name") or "N/A", job_data.get("location"))
             existing_job = db.query(Job).filter(Job.source_url == job_data["source_url"]).first()
 
             if existing_job:
                 existing_job.title = job_data["title"]
                 existing_job.company_company_id = company.company_id
+                existing_job.level = level
+                existing_job.employment_type = employment_type
+                existing_job.experience = experience
+                existing_job.application_deadline = application_deadline
                 existing_job.location = job_data["location"]
                 existing_job.salary_min = salary_min
                 existing_job.salary_max = salary_max
                 existing_job.currency = currency
                 existing_job.description_raw = raw_description
                 existing_job.description_clean = cleaned_description
+                existing_job.role_responsibilities = role_responsibilities
+                existing_job.skills_qualifications = skills_qualifications
+                existing_job.benefits = benefits
                 existing_job.source_site = job_data["source_website"]
                 existing_job.scraped_at = datetime.now(timezone.utc)
                 existing_job.status = JobStatus.active
@@ -897,12 +1545,19 @@ class JobCrawler:
             new_job = Job(
                 company_company_id=company.company_id,
                 title=job_data["title"],
+                level=level,
+                employment_type=employment_type,
+                experience=experience,
+                application_deadline=application_deadline,
                 location=job_data["location"],
                 salary_min=salary_min,
                 salary_max=salary_max,
                 currency=currency,
                 description_raw=raw_description,
                 description_clean=cleaned_description,
+                role_responsibilities=role_responsibilities,
+                skills_qualifications=skills_qualifications,
+                benefits=benefits,
                 source_url=job_data["source_url"],
                 source_site=job_data["source_website"],
                 scraped_at=datetime.now(timezone.utc),

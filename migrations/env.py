@@ -12,10 +12,12 @@ sys.path.append(os.getcwd())
 
 # --- PHẦN SỬA ĐỔI 2: Import Base từ file gom Model của bạn ---
 from app.db.base import Base #
+from app.core.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
 if config.config_file_name is not None:
@@ -26,7 +28,7 @@ target_metadata = Base.metadata #
 
 # (Giữ nguyên các phần còn lại bên dưới của bạn)
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
