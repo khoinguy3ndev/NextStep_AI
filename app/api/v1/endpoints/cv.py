@@ -469,6 +469,7 @@ def _run_analysis(
         job_match_json=match_result.model_dump(mode="json"),
         gap_analysis_json=gap_result.model_dump(mode="json"),
         roadmap_json=roadmap_result.model_dump(mode="json"),
+        ai_review_json=ai_review,
     )
     db.add(analysis_result)
     db.commit()
@@ -602,5 +603,5 @@ def get_analysis_result(
         job_match=row.job_match_json,
         gap_analysis=row.gap_analysis_json,
         roadmap=row.roadmap_json,
-        ai_review=None,
+        ai_review=row.ai_review_json,
     )
